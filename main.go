@@ -3,6 +3,7 @@ package main
 import (
     "flag"
     "fmt"
+    "github.com/jbillote/YAB/commands"
     "github.com/jbillote/YAB/config"
     "github.com/jbillote/YAB/util/logger"
     "gopkg.in/yaml.v2"
@@ -79,6 +80,22 @@ func main() {
 
     // Start thread to change the status
     go RotateStatuses(d, c.Statuses, c.StatusInterval)
+
+    // Register slash commands
+    d.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+        if h, ok := commands.Handlers[i.ApplicationCommandData().Name]; ok {
+            h(s, i)
+        }
+    })
+
+    registeredCommands := make([]*discordgo.ApplicationCommand, len(commands.Commands))
+    for i, v := range commands.Commands {
+        cmd, err := d.ApplicationCommandCreate(d.State.User.ID, "", v)
+        if err != nil {
+            log.Error(fmt.Sprintf("Unable to add command %v, err: %v", v.Name, err))
+        }
+        registeredCommands[i] = cmd
+    }
 
     s := make(chan os.Signal, 1)
     signal.Notify(s, os.Interrupt, os.Kill)
