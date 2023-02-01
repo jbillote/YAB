@@ -8,8 +8,8 @@ GRAPHQL := $(wildcard graphql/*)
 TWITTER := $(wildcard twitter/*)
 UTIL := $(wildcard util/*)
 
-toukabot: $(ROOT) $(PARSE_MESSAGE) $(ROTATE_STATUS) $(COMMANDS) $(CONFIG) $(FRAMEDATA) $(GRAPHQL) $(TWITTER) $(UTIL)
+YAB: $(ROOT) $(PARSE_MESSAGE) $(ROTATE_STATUS) $(COMMANDS) $(CONFIG) $(FRAMEDATA) $(GRAPHQL) $(TWITTER) $(UTIL)
 	go build
 
 clean:
-	rm toukabot-v2
+	rm YAB
