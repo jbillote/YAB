@@ -3,6 +3,7 @@ package commands
 import (
     "fmt"
     "github.com/bwmarrin/discordgo"
+    "github.com/jbillote/YAB/graphql"
     "github.com/jbillote/YAB/util/logger"
 )
 
@@ -15,10 +16,12 @@ func mbtlHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
         options[o.Name] = o
     }
 
+    move, _ := graphql.QueryMBTLMove(options["character"].StringValue(), options["input"].StringValue())
+
     s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
         Type: discordgo.InteractionResponseChannelMessageWithSource,
         Data: &discordgo.InteractionResponseData{
-            Content: fmt.Sprintf("%v's %v", options["character"].StringValue(), options["input"].StringValue()),
+            Content: fmt.Sprintf("%v", move),
         },
     })
 }
