@@ -21,4 +21,8 @@ var Commands = []*discordgo.ApplicationCommand{
             },
         },
     },
+    {
+        Name:        "gbvs",
+        Description: "Granblue Fantasy: Versus frame data",
+    },
 }
