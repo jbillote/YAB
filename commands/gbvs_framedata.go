@@ -13,7 +13,7 @@ func gbvsHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
     s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
         Type: discordgo.InteractionResponseChannelMessageWithSource,
         Data: &discordgo.InteractionResponseData{
-            Content: "gbvs",
+            Content: "GBVS isn't supported yet (・ω<) テヘペロ",
         },
     })
 }
