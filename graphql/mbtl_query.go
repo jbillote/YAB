@@ -45,7 +45,7 @@ func QueryMBTLMove(character string, input string) (*MBTLMove, error) {
             Overall   graphql.String
             Advantage graphql.String
             Invuln    graphql.String
-        } `graphql:"getMove(character: $character, input: $input)"`
+        } `graphql:"getMove(game: \"mbtl\", character: $character, input: $input)"`
     }
 
     queryVariables := map[string]interface{}{
