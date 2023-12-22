@@ -35,11 +35,11 @@ func URLValid(s string) bool {
  * Returns:
  * True if URL is accessible, else false
  */
-func URLAvailable(url string) bool  {
+func URLAvailable(url string) bool {
 	log.Info(fmt.Sprintf("Checking availability of URL, url=%s", url))
 
 	r, err := http.Get(url)
-	available := err == nil && r!= nil && r.StatusCode == 200
+	available := err == nil && r != nil && r.StatusCode == 200
 
 	if available {
 		log.Info(fmt.Sprintf("URL is available, url=%s", url))

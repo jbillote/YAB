@@ -1,12 +1,15 @@
 package twitter
 
 import (
+	"encoding/json"
 	"fmt"
-	"strconv"
+	"io"
+	"net/http"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/dghubble/go-twitter/twitter"
 
 	"github.com/jbillote/YAB/util"
 	"github.com/jbillote/YAB/util/logger"
@@ -15,92 +18,89 @@ import (
 var log = logger.GetLogger("TwitterParser")
 
 /*
- * Function: ParseTwitterLink
- * Get GIFs and videos from Twitter links
- *
- * Params:
- * url: Twitter URL to get content from
- *
- * Returns:
- * URL to GIF or video if there is one
- * error if anything went wrong
+* Function: ParseTwitterLink
+* Get GIFs and videos from Twitter links
+*
+* Params:
+* url: Twitter URL to get content from
  */
 func ParseTwitterLink(session *discordgo.Session, channelID string, url string) {
-	log.Info(fmt.Sprintf("Checking URL to see if it's a valid URL, url=%s", url))
-	available := util.URLAvailable(url)
-
-	if !available {
-		log.Error(fmt.Sprintf("URL not available, url=%s", url))
-		return
-	}
-
-	twitterClient := TwitterAuth()
-
-	splitMessage := strings.Split(url, "/")
-	var id int64 = -1
-	for i, v := range splitMessage {
-		if i > 0 && splitMessage[i - 1] == "status" {
-			splitId := strings.Split(v, "?")
-			temp, err := strconv.ParseInt(splitId[0], 10, 64)
-			if err != nil {
-				log.Error(fmt.Sprintf("Unable to parse Tweet ID, err=%s", err))
-				return
-			}
-
-			id = temp
-		}
-	}
-
-	if id < 0 {
-		log.Info(fmt.Sprintf("Link did not contain valid Twitter ID, url=%s", url))
-		return
-	}
-
-	params := &twitter.StatusShowParams{TweetMode: "extended"}
-	tweet, _, err := twitterClient.Statuses.Show(id, params)
+	r, err := regexp.Compile("(\\bx|\\btwitter)\\.com\\/(\\w{1,15}\\/(status|statuses)\\/\\d{2,20})")
 	if err != nil {
-		log.Error(fmt.Sprintf("Unable to fetch Tweet, id=%d, err=%s", id, err))
+		log.Error(fmt.Sprintf("Unable to generate regex, err=%s", err))
+		return
+	}
+	match := r.FindStringSubmatch(url)
+	if match == nil {
+		log.Error(fmt.Sprintf("No Twitter links found, url=%s", url))
+		return
+	}
+	log.Info(match)
+
+	vxtwitterURL := fmt.Sprintf("https://api.vxtwitter.com/%s", match[2])
+
+	resp, err := http.Get(vxtwitterURL)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unable to get Tweet information, err=%s", err))
 		return
 	}
 
-	if tweet.ExtendedEntities == nil || len(tweet.ExtendedEntities.Media) < 1 {
-		log.Info(fmt.Sprintf("Tweet has no media or animated media, id=%d", id))
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unable to read Tweet information, err=%s", err))
 		return
 	}
 
-	media :=  tweet.ExtendedEntities.Media[0].Type
+	var tweetInfo vxTwitter
+	err = json.Unmarshal(body, &tweetInfo)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unable to unmarshal Tweet information, err=%s", err))
+		return
+	}
 
-	if media == "video" {
-		log.Info(fmt.Sprintf("Tweet has video, id=%d", id))
+	embed := util.NewEmbed()
+	embed.SetTitle(fmt.Sprintf("@%s", tweetInfo.ScreenName))
+	embed.SetURL(tweetInfo.TweetURL)
+	embed.SetAuthor(fmt.Sprintf("https://twitter.com/%s", tweetInfo.ScreenName),
+		fmt.Sprintf("%s (@%s)", tweetInfo.UserName, tweetInfo.ScreenName),
+		tweetInfo.AuthorProfilePicture)
+	embed.SetFooter("Twitter", "http://i.toukat.moe/twitter_logo.png")
+	embed.SetTimestamp(time.Unix(int64(tweetInfo.Timestamp), 0).Format(time.RFC3339))
 
-		videoNdx := -1
-		maxBitrate := -1
-		for k, v := range tweet.ExtendedEntities.Media[0].VideoInfo.Variants {
-			if v.Bitrate > 0 && strings.Contains(v.URL, "mp4") && v.Bitrate > maxBitrate {
-				videoNdx = k
+	splitDescription := strings.Split(tweetInfo.Text, " ")
+	trimmedDescription := strings.TrimSpace(strings.ReplaceAll(tweetInfo.Text,
+		splitDescription[len(splitDescription)-1], ""))
+	embed.SetDescription(trimmedDescription)
+
+	var embeds []*discordgo.MessageEmbed
+	var videos []string
+
+	for _, u := range tweetInfo.MediaURLs {
+		splitUrl := strings.Split(u, ".")
+		extension := splitUrl[len(splitUrl)-1]
+
+		if strings.Contains(extension, "jpg") || strings.Contains(extension, "jpeg") ||
+			strings.Contains(extension, "png") {
+
+			if embed.MessageEmbed.Image != nil {
+				embed.SetImage(u)
+			} else {
+				e := util.NewEmbed()
+				e.SetURL(tweetInfo.TweetURL)
+				e.SetImage(u)
+
+				embeds = append(embeds, e.MessageEmbed)
 			}
+		} else if strings.Contains(extension, "mp4") {
+			videos = append(videos, u)
 		}
+	}
+	embeds = append([]*discordgo.MessageEmbed{embed.MessageEmbed}, embeds...)
 
-		if videoNdx < 0 {
-			log.Info(fmt.Sprintf("Tweet had no media with MP4 variant, id=%d", id))
-			videoNdx = 0
-		} else {
-			log.Info(fmt.Sprintf("Tweet had media with MP4 variant at index %d, id=%d", videoNdx, id))
-		}
-
-		_, err = session.ChannelMessageSend(channelID, tweet.ExtendedEntities.Media[0].VideoInfo.Variants[videoNdx].URL)
-		if err!= nil {
-			log.Error("Unable to send content")
-			log.Error(err)
-		}
-	} else if media == "animated_gif" {
-		log.Info(fmt.Sprintf("Tweet has GIF, id=%d", id))
-		_, err = session.ChannelMessageSend(channelID, tweet.ExtendedEntities.Media[0].VideoInfo.Variants[0].URL)
-		if err != nil {
-			log.Error("Unable to send content")
-			log.Error(err)
-		}
-	} else {
-		log.Info(fmt.Sprintf("Tweet doesn't have GIF or video, id=%d", id))
+	session.ChannelMessageSendEmbeds(channelID, embeds)
+	for _, v := range videos {
+		session.ChannelMessageSend(channelID, v)
 	}
 }

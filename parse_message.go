@@ -10,16 +10,16 @@ import (
 )
 
 func ParseMessage(session *discordgo.Session, message *discordgo.MessageCreate) {
-    if message.Author.ID == uid {
-        return
-    }
+	if message.Author.ID == uid {
+		return
+	}
 
-    splitMessage := strings.Split(message.Content, " ")
+	splitMessage := strings.Split(message.Content, " ")
 
-    // Check for Twitter links
-    for _, m := range splitMessage {
-        if util.URLValid(m) && util.URLAvailable(m) {
-            twitter.ParseTwitterLink(session, message.ChannelID, m)
-        }
-    }
+	// Check for Twitter links
+	for _, m := range splitMessage {
+		if util.URLValid(m) {
+			twitter.ParseTwitterLink(session, message.ChannelID, m)
+		}
+	}
 }

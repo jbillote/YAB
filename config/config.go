@@ -10,12 +10,10 @@ import (
 
 type Config struct {
 	BotToken       string   `yaml:"Token"`
-	TwitterToken   string   `yaml:"TwitterToken"`
-	TwitterSecret  string   `yaml:"TwitterSecret"`
 	APIHost        string   `yaml:"Host"`
 	CommandPrefix  string   `yaml:"Prefix"`
 	Statuses       []string `yaml:"Statuses"`
-	StatusInterval int64   `yaml:"StatusInterval"`
+	StatusInterval int64    `yaml:"StatusInterval"`
 }
 
 var log = logger.GetLogger("Config")

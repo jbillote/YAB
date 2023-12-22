@@ -1,12 +1,12 @@
 package main
 
 import (
-    "fmt"
-    "time"
+	"fmt"
+	"time"
 
-    "github.com/bwmarrin/discordgo"
+	"github.com/bwmarrin/discordgo"
 
-    "github.com/jbillote/YAB/util"
+	"github.com/jbillote/YAB/util"
 )
 
 /*
@@ -19,27 +19,27 @@ import (
  * interval: Interval at which to rotate statuses, in seconds
  */
 func RotateStatuses(session *discordgo.Session, statuses []string, interval int64) {
-    ndx := util.RandomRange(0, len(statuses))
+	ndx := util.RandomRange(0, len(statuses))
 
-    err := session.UpdateGameStatus(0, statuses[ndx])
-    if err != nil {
-        log.Error("Unable to change status")
-        log.Error(err)
-    } else {
-        log.Info(fmt.Sprintf("Status set to %s", statuses[ndx]))
-    }
+	err := session.UpdateGameStatus(0, statuses[ndx])
+	if err != nil {
+		log.Error("Unable to change status")
+		log.Error(err)
+	} else {
+		log.Info(fmt.Sprintf("Status set to %s", statuses[ndx]))
+	}
 
-    for true {
-        time.Sleep(time.Duration(interval) * time.Second)
+	for true {
+		time.Sleep(time.Duration(interval) * time.Second)
 
-        ndx = util.RandomRange(0, len(statuses))
+		ndx = util.RandomRange(0, len(statuses))
 
-        err = session.UpdateGameStatus(0, statuses[ndx])
-        if err != nil {
-            log.Error("Unable to change status")
-            log.Error(err)
-        } else {
-            log.Info(fmt.Sprintf("Changed status to %s", statuses[ndx]))
-        }
-    }
+		err = session.UpdateGameStatus(0, statuses[ndx])
+		if err != nil {
+			log.Error("Unable to change status")
+			log.Error(err)
+		} else {
+			log.Info(fmt.Sprintf("Changed status to %s", statuses[ndx]))
+		}
+	}
 }
