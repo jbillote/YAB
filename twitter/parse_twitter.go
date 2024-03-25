@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -37,9 +36,9 @@ func ParseTwitterLink(session *discordgo.Session, channelID string, url string) 
 	}
 	log.Info(match)
 
-	vxtwitterURL := fmt.Sprintf("https://api.vxtwitter.com/%s", match[2])
+	fxtwitterURL := fmt.Sprintf("https://api.fxtwitter.com/%s", match[2])
 
-	resp, err := http.Get(vxtwitterURL)
+	resp, err := http.Get(fxtwitterURL)
 	if err != nil {
 		log.Error(fmt.Sprintf("Unable to get Tweet information, err=%s", err))
 		return
@@ -53,7 +52,7 @@ func ParseTwitterLink(session *discordgo.Session, channelID string, url string) 
 		return
 	}
 
-	var tweetInfo vxTwitter
+	var tweetInfo fxTwitter
 	err = json.Unmarshal(body, &tweetInfo)
 	if err != nil {
 		log.Error(fmt.Sprintf("Unable to unmarshal Tweet information, err=%s", err))
@@ -61,40 +60,31 @@ func ParseTwitterLink(session *discordgo.Session, channelID string, url string) 
 	}
 
 	embed := util.NewEmbed()
-	embed.SetTitle(fmt.Sprintf("@%s", tweetInfo.ScreenName))
-	embed.SetURL(tweetInfo.TweetURL)
-	embed.SetAuthor(fmt.Sprintf("https://twitter.com/%s", tweetInfo.ScreenName),
-		fmt.Sprintf("%s (@%s)", tweetInfo.UserName, tweetInfo.ScreenName),
-		tweetInfo.AuthorProfilePicture)
-	embed.SetFooter("Twitter", "http://i.toukat.moe/twitter_logo.png")
-	embed.SetTimestamp(time.Unix(int64(tweetInfo.Timestamp), 0).Format(time.RFC3339))
-
-	splitDescription := strings.Split(tweetInfo.Text, " ")
-	trimmedDescription := strings.TrimSpace(strings.ReplaceAll(tweetInfo.Text,
-		splitDescription[len(splitDescription)-1], ""))
-	embed.SetDescription(trimmedDescription)
+	embed.SetTitle("Original Tweet")
+	embed.SetURL(tweetInfo.Tweet.URL)
+	embed.SetAuthor(tweetInfo.Tweet.Author.URL,
+		fmt.Sprintf("%s (@%s)", tweetInfo.Tweet.Author.UserName, tweetInfo.Tweet.Author.ScreenName),
+		tweetInfo.Tweet.Author.AvatarURL)
+	embed.SetFooter("Twitter", "https://abs.twimg.com/icons/apple-touch-icon-192x192.png")
+	embed.SetTimestamp(time.Unix(int64(tweetInfo.Tweet.Timestamp), 0).Format(time.RFC3339))
+	embed.SetDescription(tweetInfo.Tweet.Text)
 
 	var embeds []*discordgo.MessageEmbed
 	var videos []string
 
-	for _, u := range tweetInfo.MediaURLs {
-		splitUrl := strings.Split(u, ".")
-		extension := splitUrl[len(splitUrl)-1]
-
-		if strings.Contains(extension, "jpg") || strings.Contains(extension, "jpeg") ||
-			strings.Contains(extension, "png") {
-
+	for _, u := range tweetInfo.Tweet.Media.Media {
+		if u.Type == "photo" {
 			if embed.MessageEmbed.Image != nil {
-				embed.SetImage(u)
+				embed.SetImage(u.URL)
 			} else {
 				e := util.NewEmbed()
-				e.SetURL(tweetInfo.TweetURL)
-				e.SetImage(u)
+				e.SetURL(tweetInfo.Tweet.URL)
+				e.SetImage(u.URL)
 
 				embeds = append(embeds, e.MessageEmbed)
 			}
-		} else if strings.Contains(extension, "mp4") {
-			videos = append(videos, u)
+		} else if u.Type == "video" || u.Type == "gif" {
+			videos = append(videos, u.URL)
 		}
 	}
 	embeds = append([]*discordgo.MessageEmbed{embed.MessageEmbed}, embeds...)
