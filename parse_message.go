@@ -19,7 +19,7 @@ func ParseMessage(session *discordgo.Session, message *discordgo.MessageCreate) 
 	// Check for Twitter links
 	for _, m := range splitMessage {
 		if util.URLValid(m) {
-			twitter.ParseTwitterLink(session, message.ChannelID, m)
+			twitter.ParseTwitterLink(session, message, m)
 		}
 	}
 }

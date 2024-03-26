@@ -23,7 +23,7 @@ var log = logger.GetLogger("TwitterParser")
 * Params:
 * url: Twitter URL to get content from
  */
-func ParseTwitterLink(session *discordgo.Session, channelID string, url string) {
+func ParseTwitterLink(session *discordgo.Session, message *discordgo.MessageCreate, url string) {
 	r, err := regexp.Compile("(\\bx|\\btwitter)\\.com\\/(\\w{1,15}\\/(status|statuses)\\/\\d{2,20})")
 	if err != nil {
 		log.Error(fmt.Sprintf("Unable to generate regex, err=%s", err))
@@ -68,13 +68,14 @@ func ParseTwitterLink(session *discordgo.Session, channelID string, url string) 
 	embed.SetFooter("Twitter", "https://abs.twimg.com/icons/apple-touch-icon-192x192.png")
 	embed.SetTimestamp(time.Unix(int64(tweetInfo.Tweet.Timestamp), 0).Format(time.RFC3339))
 	embed.SetDescription(tweetInfo.Tweet.Text)
+	embed.SetColor(0x3498db)
 
 	var embeds []*discordgo.MessageEmbed
 	var videos []string
 
 	for _, u := range tweetInfo.Tweet.Media.Media {
 		if u.Type == "photo" {
-			if embed.MessageEmbed.Image != nil {
+			if embed.MessageEmbed.Image == nil {
 				embed.SetImage(u.URL)
 			} else {
 				e := util.NewEmbed()
@@ -89,8 +90,14 @@ func ParseTwitterLink(session *discordgo.Session, channelID string, url string) 
 	}
 	embeds = append([]*discordgo.MessageEmbed{embed.MessageEmbed}, embeds...)
 
-	session.ChannelMessageSendEmbeds(channelID, embeds)
+	session.ChannelMessageSendComplex(message.ChannelID, &discordgo.MessageSend{
+		Embeds: embeds,
+		AllowedMentions: &discordgo.MessageAllowedMentions{
+			RepliedUser: false,
+		},
+		Reference: message.Reference(),
+	})
 	for _, v := range videos {
-		session.ChannelMessageSend(channelID, v)
+		session.ChannelMessageSend(message.ChannelID, v)
 	}
 }

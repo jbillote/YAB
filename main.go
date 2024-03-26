@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+
 	"github.com/jbillote/YAB/config"
 	"github.com/jbillote/YAB/util/logger"
 	"gopkg.in/yaml.v2"

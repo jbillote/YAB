@@ -57,6 +57,11 @@ func (e *Embed) SetTimestamp(timestamp string) *Embed {
 	return e
 }
 
+func (e *Embed) SetColor(color int) *Embed {
+	e.Color = color
+	return e
+}
+
 func (e *Embed) AddField(name string, value interface{}, inline bool) *Embed {
 	if value == reflect.Zero(reflect.TypeOf(value)).Interface() {
 		return e
