@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -24,19 +23,7 @@ var log = logger.GetLogger("TwitterParser")
 * url: Twitter URL to get content from
  */
 func ParseTwitterLink(session *discordgo.Session, message *discordgo.MessageCreate, url string) {
-	r, err := regexp.Compile("(\\bx|\\btwitter)\\.com\\/(\\w{1,15}\\/(status|statuses)\\/\\d{2,20})")
-	if err != nil {
-		log.Error(fmt.Sprintf("Unable to generate regex, err=%s", err))
-		return
-	}
-	match := r.FindStringSubmatch(url)
-	if match == nil {
-		log.Error(fmt.Sprintf("No Twitter links found, url=%s", url))
-		return
-	}
-	log.Info(match)
-
-	fxtwitterURL := fmt.Sprintf("https://api.fxtwitter.com/%s", match[2])
+	fxtwitterURL := fmt.Sprintf("https://api.fxtwitter.com/%s", url)
 
 	resp, err := http.Get(fxtwitterURL)
 	if err != nil {
