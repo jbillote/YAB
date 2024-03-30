@@ -49,7 +49,13 @@ func ParseTwitterLink(session *discordgo.Session, message *discordgo.MessageCrea
 			return
 		}
 
-		originalEmbeds, originalVideos := generateTweetEmbeds(tweetInfo, false)
+		originalEmbeds, originalVideos := generateTweetEmbeds(tweetInfo.Tweet, false)
+		var quoteEmbeds []*discordgo.MessageEmbed
+		var quoteVideos []string
+
+		if tweetInfo.Tweet.Quote != nil {
+			quoteEmbeds, quoteVideos = generateTweetEmbeds(*tweetInfo.Tweet.Quote, true)
+		}
 
 		session.ChannelMessageSendComplex(message.ChannelID, &discordgo.MessageSend{
 			Embeds: originalEmbeds,
@@ -61,10 +67,15 @@ func ParseTwitterLink(session *discordgo.Session, message *discordgo.MessageCrea
 		for _, v := range originalVideos {
 			session.ChannelMessageSend(message.ChannelID, v)
 		}
+
+		session.ChannelMessageSendEmbeds(message.ChannelID, quoteEmbeds)
+		for _, v := range quoteVideos {
+			session.ChannelMessageSend(message.ChannelID, v)
+		}
 	}
 }
 
-func generateTweetEmbeds(tweetInfo fxTwitter, isQuote bool) ([]*discordgo.MessageEmbed, []string) {
+func generateTweetEmbeds(tweetInfo tweet, isQuote bool) ([]*discordgo.MessageEmbed, []string) {
 	var embeds []*discordgo.MessageEmbed
 	var videos []string
 
@@ -74,22 +85,22 @@ func generateTweetEmbeds(tweetInfo fxTwitter, isQuote bool) ([]*discordgo.Messag
 	} else {
 		embed.SetTitle("Original Tweet")
 	}
-	embed.SetURL(tweetInfo.Tweet.URL)
-	embed.SetAuthor(tweetInfo.Tweet.Author.URL,
-		fmt.Sprintf("%s (@%s)", tweetInfo.Tweet.Author.UserName, tweetInfo.Tweet.Author.ScreenName),
-		tweetInfo.Tweet.Author.AvatarURL)
+	embed.SetURL(tweetInfo.URL)
+	embed.SetAuthor(tweetInfo.Author.URL,
+		fmt.Sprintf("%s (@%s)", tweetInfo.Author.UserName, tweetInfo.Author.ScreenName),
+		tweetInfo.Author.AvatarURL)
 	embed.SetFooter("Twitter", "https://abs.twimg.com/icons/apple-touch-icon-192x192.png")
-	embed.SetTimestamp(time.Unix(int64(tweetInfo.Tweet.Timestamp), 0).Format(time.RFC3339))
-	embed.SetDescription(tweetInfo.Tweet.Text)
+	embed.SetTimestamp(time.Unix(int64(tweetInfo.Timestamp), 0).Format(time.RFC3339))
+	embed.SetDescription(tweetInfo.Text)
 	embed.SetColor(0x3498db)
 
-	for _, u := range tweetInfo.Tweet.Media.Media {
+	for _, u := range tweetInfo.Media.Media {
 		if u.Type == "photo" {
 			if embed.MessageEmbed.Image == nil {
 				embed.SetImage(u.URL)
 			} else {
 				e := util.NewEmbed()
-				e.SetURL(tweetInfo.Tweet.URL)
+				e.SetURL(tweetInfo.URL)
 				e.SetImage(u.URL)
 
 				embeds = append(embeds, e.MessageEmbed)
