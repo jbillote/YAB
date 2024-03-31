@@ -23,31 +23,42 @@ var log = logger.GetLogger("TwitterParser")
 * url: Twitter URL to get content from
  */
 func ParseTwitterLink(session *discordgo.Session, message *discordgo.MessageCreate, url string) {
+	// Give time for embeds to load
 	time.Sleep(5 * time.Second)
 
-	if len(message.Embeds) < 1 {
-		fxtwitterURL := fmt.Sprintf("https://api.fxtwitter.com/%s", url)
+	// Make sure embeds are up to date
+	m, err := session.ChannelMessage(message.ChannelID, message.ID)
+	if err != nil {
+		log.Error(err)
+		return
+	}
 
-		resp, err := http.Get(fxtwitterURL)
-		if err != nil {
-			log.Error(fmt.Sprintf("Unable to get Tweet information, err=%s", err))
-			return
-		}
+	fxtwitterURL := fmt.Sprintf("https://api.fxtwitter.com/%s", url)
 
-		defer resp.Body.Close()
+	resp, err := http.Get(fxtwitterURL)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unable to get Tweet information, err=%s", err))
+		return
+	}
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Error(fmt.Sprintf("Unable to read Tweet information, err=%s", err))
-			return
-		}
+	defer resp.Body.Close()
 
-		var tweetInfo fxTwitter
-		err = json.Unmarshal(body, &tweetInfo)
-		if err != nil {
-			log.Error(fmt.Sprintf("Unable to unmarshal Tweet information, err=%s", err))
-			return
-		}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unable to read Tweet information, err=%s", err))
+		return
+	}
+
+	var tweetInfo fxTwitter
+	err = json.Unmarshal(body, &tweetInfo)
+	if err != nil {
+		log.Error(fmt.Sprintf("Unable to unmarshal Tweet information, err=%s", err))
+		return
+	}
+
+	if len(m.Embeds) < 1 || (tweetInfo.Tweet.Media != nil &&
+		(len(tweetInfo.Tweet.Media.Photos) > 1 ||
+			tweetInfo.Tweet.Media.Videos != nil)) {
 
 		originalEmbeds, originalVideos := generateTweetEmbeds(tweetInfo.Tweet, false)
 		var quoteEmbeds []*discordgo.MessageEmbed

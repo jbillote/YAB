@@ -9,7 +9,7 @@ type tweet struct {
 	Text      string `json:"text"`
 	Author    author `json:"author"`
 	Timestamp int    `json:"created_timestamp"`
-	Media     media  `json:"media"`
+	Media     *media `json:"media"`
 	Quote     *tweet `json:"quote"`
 }
 
